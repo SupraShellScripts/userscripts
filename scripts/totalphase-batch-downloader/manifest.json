@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "totalphase-batch-downloader",
+  "name": "Total Phase Batch Downloader",
+  "version": "1.1.1",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "sourceRepository": "SupraShellScripts/userscripts-private",
+  "sourceCommit": "b007de32e49fc5ac2a7d2d8fba462fad0d1dbc96",
+  "publicRepository": "SupraShellScripts/userscripts",
+  "installUrl": "https://suprashellscripts.github.io/userscripts/scripts/totalphase-batch-downloader/totalphase-batch-downloader.user.js",
+  "updateUrl": "https://suprashellscripts.github.io/userscripts/scripts/totalphase-batch-downloader/totalphase-batch-downloader.meta.js",
+  "sha256": "22cef0ba5a949b2ed92605fc80740a33848754df60996dd3e2ec61840d976b36",
+  "matches": [
+    "https://www.totalphase.com/*",
+    "https://totalphase.com/*"
+  ],
+  "compatibility": {
+    "firefoxViolentmonkey": "supported",
+    "edgeViolentmonkey": "supported",
+    "chromeViolentmonkey": "supported",
+    "safariUserscripts": "browser-click fallback"
+  },
+  "releaseEvidenceCommit": "65c68ee19a50ba233357b6b209b1a205d96a485d",
+  "correlationId": "f908d1f6eccc4d89e4677488313a458a"
+}

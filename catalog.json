@@ -1,6 +1,18 @@
 {
   "schemaVersion": 1,
   "repository": "SupraShellScripts/userscripts",
-  "generatedAt": "1970-01-01T00:00:00.000Z",
-  "scripts": []
+  "generatedAt": "2026-08-03T19:05:40.354Z",
+  "scripts": [
+    {
+      "id": "totalphase-batch-downloader",
+      "name": "Total Phase Batch Downloader",
+      "version": "1.1.1",
+      "description": "Select, sequence, and document authenticated Total Phase software, driver, firmware, and documentation downloads.",
+      "license": "PolyForm-Noncommercial-1.0.0",
+      "installUrl": "https://suprashellscripts.github.io/userscripts/scripts/totalphase-batch-downloader/totalphase-batch-downloader.user.js",
+      "updateUrl": "https://suprashellscripts.github.io/userscripts/scripts/totalphase-batch-downloader/totalphase-batch-downloader.meta.js",
+      "repositoryUrl": "https://github.com/SupraShellScripts/userscripts/tree/main/scripts/totalphase-batch-downloader",
+      "sha256": "22cef0ba5a949b2ed92605fc80740a33848754df60996dd3e2ec61840d976b36"
+    }
+  ]
 }
