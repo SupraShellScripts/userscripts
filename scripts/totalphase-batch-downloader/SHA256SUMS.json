@@ -1,0 +1,8 @@
+{
+  "scripts/totalphase-batch-downloader/totalphase-batch-downloader.user.js": "22cef0ba5a949b2ed92605fc80740a33848754df60996dd3e2ec61840d976b36",
+  "scripts/totalphase-batch-downloader/totalphase-batch-downloader.meta.js": "d5e4b1fcb8865324f1213954d30ce670d707cc55851035f7663a883dc7de00eb",
+  "scripts/totalphase-batch-downloader/manifest.json": "0fa71e2d769850ce9897ac0f893e7ce244dab7836975af408eb0b33478241130",
+  "scripts/totalphase-batch-downloader/versions/1.1.1/totalphase-batch-downloader.user.js": "22cef0ba5a949b2ed92605fc80740a33848754df60996dd3e2ec61840d976b36",
+  "scripts/totalphase-batch-downloader/versions/1.1.1/manifest.json": "0fa71e2d769850ce9897ac0f893e7ce244dab7836975af408eb0b33478241130",
+  "registries/greasyfork/totalphase-batch-downloader.user.js": "92af65fb91feab7f52624f5d6ff9741e1f6e29dd0db3e57819ec616154c5249d"
+}

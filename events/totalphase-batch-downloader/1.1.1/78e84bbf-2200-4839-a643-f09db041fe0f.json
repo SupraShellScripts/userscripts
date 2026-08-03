@@ -1,0 +1,20 @@
+{
+  "specversion": "1.0",
+  "id": "78e84bbf-2200-4839-a643-f09db041fe0f",
+  "source": "https://github.com/SupraShellScripts/userscripts-private",
+  "type": "org.suprashellscripts.userscripts.publish.proposed.v1",
+  "subject": "totalphase-batch-downloader",
+  "time": "2026-08-03T19:05:40.332Z",
+  "datacontenttype": "application/json",
+  "traceparent": "00-f908d1f6eccc4d89e4677488313a458a-37fa2e8b1d1efd8a-01",
+  "sessionid": "1eef225f-85e4-49ad-a8cc-478809eb950b",
+  "correlationid": "f908d1f6eccc4d89e4677488313a458a",
+  "data": {
+    "script": "totalphase-batch-downloader",
+    "version": "1.1.1",
+    "artifactSha256": "22cef0ba5a949b2ed92605fc80740a33848754df60996dd3e2ec61840d976b36",
+    "sourceCommit": "b007de32e49fc5ac2a7d2d8fba462fad0d1dbc96",
+    "releaseBranch": "publish/totalphase-batch-downloader/v1.1.1",
+    "privateIssue": 27
+  }
+}
