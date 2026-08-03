@@ -1,0 +1,48 @@
+name: Verify published artifacts
+on:
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - 'events/**'
+      - 'catalog.json'
+      - 'checksums.json'
+      - 'index.html'
+      - 'LICENSE'
+      - '.nojekyll'
+      - '.github/workflows/verify-artifacts.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/**'
+      - 'events/**'
+      - 'catalog.json'
+      - 'checksums.json'
+      - 'index.html'
+      - 'LICENSE'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: public-artifact-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  public-artifact-gate:
+    name: public-artifact-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: ''
+      - name: Static publication checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f .nojekyll
+          test -f catalog.json
+          test -f checksums.json
+          ! grep -RInE '(BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|authorization:|cookie:|C:\\Users\\|/home/[^/]+/)' . --exclude-dir=.git
+          find scripts -type f -name '*.user.js' -print0 | xargs -0 -r node --check
+          node .github/tools/verify-public-repo.mjs

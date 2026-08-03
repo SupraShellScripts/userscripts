@@ -1,0 +1,46 @@
+name: Published userscript bug
+about: Report a reproducible problem in a public userscript
+labels:
+  - bug
+  - status:needs-triage
+body:
+  - type: input
+    id: script
+    attributes:
+      label: Userscript and version
+      placeholder: totalphase-batch-downloader 1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options: [Firefox, Edge, Chrome, Safari, Other]
+    validations:
+      required: true
+  - type: input
+    id: manager
+    attributes:
+      label: Userscript manager and version
+      placeholder: Violentmonkey, Tampermonkey, Userscripts
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Do not include passwords, cookies, signed URLs, CAC/MFA data, or restricted vendor files.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and redacted diagnostics
+    validations:
+      required: true

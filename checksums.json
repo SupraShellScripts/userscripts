@@ -1,0 +1,14 @@
+{
+  ".github/ISSUE_TEMPLATE/bug.yml": "e95f5a7b342f7d0a2af28b24db0bbe84fdf48779abc249ae43ab8979fc08f0cd",
+  ".github/ISSUE_TEMPLATE/config.yml": "f468951307f6ca3153e3df61914dc0057162c569dd629577436deffb61967c99",
+  ".github/pull_request_template.md": "42bb0afc53992fe3d1140f3854ebdf56b6450e824620f4d18f85099db6254983",
+  ".github/tools/verify-public-repo.mjs": "132f10fb2a3a9711107a352cb548b5af92b888bf2f0d91a02b16a6e6f0e33c63",
+  ".github/workflows/verify-artifacts.yml": "861ef2167a5cb866308a0bd572fb2e2e622d5436fceb7941afeaa49fd5114f69",
+  ".nojekyll": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "catalog.json": "32d8466da4758cf4e38f74b190549c71e1bc4cd36b8289b7917d4a859f97458e",
+  "CODEOWNERS": "ce675b4d688b05ce399166b03da60c4405a7fae18032e48e348b6adc93d65fb5",
+  "index.html": "a6af4fcf6b4e3ee0d00e98c3de4b6e8a1b2c3060d63f6d55c5e25efbc56a374e",
+  "LICENSE": "a814582a774903faaf2c1028fc8c974dd0df1c9b4864cac2d18694a54d2aea58",
+  "README.md": "b056bdd28716d05ea91abf5fabaed30f1ee0a377e2053bf8e44ee897e666beac",
+  "SECURITY.md": "e7fdf0f4993a99cfaa2b0c0e2e4d203c083763c00bb5c454e01bcda3b2364dee"
+}
