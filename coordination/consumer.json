@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "repository": "SupraShellScripts/userscripts",
+  "role": "generated-public-userscript-deployment-ledger",
+  "coordinator": "SupraShellScripts/violentmonkey-workbench-private",
+  "coordinatorParentIssue": "SupraShellScripts/violentmonkey-workbench-private#9",
+  "sourceRepository": "SupraShellScripts/userscripts-private",
+  "localPath": "SupraShellScripts/userscripts",
+  "defaultBranch": "main",
+  "promotion": {
+    "branchPattern": "publish/<script-id>/v<version>",
+    "requiresPullRequest": true,
+    "generatedArtifactsOnly": true,
+    "heavyRebuildHere": false
+  },
+  "verification": {
+    "scope": [
+      "artifact presence",
+      "catalog consistency",
+      "checksums",
+      "provenance references",
+      "GitHub Pages deployment metadata"
+    ],
+    "sourceAuthority": "SupraShellScripts/userscripts-private"
+  },
+  "prohibitions": [
+    "Do not edit generated script artifacts manually.",
+    "Do not run private heavy source validation in this public ledger.",
+    "Do not allow the coordinator to bypass the userscripts-private publication workflow."
+  ]
+}
