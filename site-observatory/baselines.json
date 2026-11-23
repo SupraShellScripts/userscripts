@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "approved": false,
+  "approvedBy": null,
+  "approvedAt": null,
+  "notes": "Initial observations are unapproved. Populate per-browser/device expected bounds only after manual source-based review of multiple independent runs. Do not autoapprove from a scheduled run.",
+  "cases": []
+}

@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Public, anonymous, read-only site drift observation; NOT userscript functional qualification for unreleased/private scripts.",
+  "policy": {
+    "authentication": "none",
+    "network": "navigation only; never click vendor buttons or download files",
+    "capturePageText": false,
+    "captureCookies": false,
+    "storeScreenshotsByDefault": false,
+    "resultsRetentionDays": 3,
+    "baselineApproval": "manual"
+  },
+  "sites": [
+    {
+      "id": "totalphase",
+      "url": "https://www.totalphase.com/downloads/",
+      "expectAny": [
+        "downloads",
+        "driver",
+        "software"
+      ],
+      "publicScriptId": "totalphase-batch-downloader"
+    },
+    {
+      "id": "infineon",
+      "url": "https://softwaretools.infineon.com/",
+      "expectAny": [
+        "software",
+        "developer center",
+        "tools"
+      ]
+    },
+    {
+      "id": "epiphan",
+      "url": "https://www.epiphan.com/support/avio-hd-software-documentation/",
+      "expectAny": [
+        "firmware",
+        "configuration tool",
+        "download"
+      ]
+    },
+    {
+      "id": "terasic",
+      "url": "https://download.terasic.com/downloads/cd-rom/deca/",
+      "expectAny": [
+        "systemcd",
+        "directory",
+        "deca"
+      ]
+    },
+    {
+      "id": "altera",
+      "url": "https://www.altera.com/downloads/fpga-development-tools/quartus-prime-pro-edition-design-software-version-26-3-windows",
+      "expectAny": [
+        "quartus",
+        "download",
+        "license"
+      ]
+    },
+    {
+      "id": "amd-xilinx",
+      "url": "https://www.amd.com/en/support/downloads/adaptive-socs-and-fpgas/development-tools/2026-2.html",
+      "expectAny": [
+        "vivado",
+        "installer",
+        "downloads"
+      ]
+    },
+    {
+      "id": "ebay",
+      "url": "https://www.ebay.com/sch/i.html?_nkw=usb+cable",
+      "expectAny": [
+        "results",
+        "items",
+        "usb"
+      ]
+    }
+  ]
+}
