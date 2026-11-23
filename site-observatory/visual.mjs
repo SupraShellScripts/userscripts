@@ -33,7 +33,7 @@ export async function observeSyntheticPublishedUi(browser, browserName, profile,
       if (route.request().url() !== fixtureUrl) return route.abort();
       return route.fulfill({
         status:200,contentType:'text/html',
-        body:'<!doctype html><html lang="en"><head><title>Synthetic public download fixture</title></head>'+
+        body:'<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Synthetic public download fixture</title></head>'+
           '<body><main><h1>Example download resources</h1><p>Public synthetic page only</p>'+
           '<a href="/downloadable/download/sample/sample_id/123/">Example package</a></main></body></html>',
       });
