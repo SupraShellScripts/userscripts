@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { chromium, firefox, webkit, devices } from 'playwright';
 import {matchBaseline, assessDrift} from './drift.mjs';
+import {observeSyntheticPublishedUi} from './visual.mjs';
 
 const browsers = { chromium, firefox, webkit };
 const browserName = process.env.OBS_BROWSER || 'chromium';
@@ -153,12 +154,20 @@ for (const site of config.sites) {
     await context.close();
   }
 }
+let syntheticUi;
+try {
+  syntheticUi=await observeSyntheticPublishedUi(browser,browserName,profile,deviceConfig);
+} catch (error) {
+  syntheticUi={uiCheck:'inconclusive',errorClass:safeFailure(error)};
+}
+console.log(JSON.stringify({event:'userscripts.site-observer.synthetic-visual',...syntheticUi}));
 await browser.close();
 await fs.mkdir('reports', {recursive:true});
 const report = {
   schemaVersion:1, observedAt:new Date().toISOString(),
   sourceCommit:process.env.GITHUB_SHA || 'local-unpinned',
   browser:browserName, profile, approvedBaseline:baselines.approved === true, results:records,
+  syntheticUi,
   limitations:['No authentication or vendor clicks','Mobile profiles are emulation, not devices',
     'No private script execution','Screenshot baselines are not automatically approved']
 };
@@ -168,4 +177,4 @@ const candidateDrift = records.filter(x => x.status === 'drift-candidate').lengt
 const blocked = records.filter(x => !['observed','drift-candidate'].includes(x.status)).length;
 console.log(JSON.stringify({event:'userscripts.site-observer.summary',browser:browserName,profile,
   driftCandidates:candidateDrift,notObservedOrFailed:blocked,report:filename}));
-if (records.some(x => x.status === 'script-regression')) process.exitCode = 1;
+if (records.some(x => x.status === 'script-regression') || syntheticUi.uiCheck !== 'pass') process.exitCode = 1;
