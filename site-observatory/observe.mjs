@@ -13,7 +13,9 @@ if (!Object.hasOwn(browsers, browserName) || !['desktop', 'mobile'].includes(pro
 }
 const phone = devices[browserName === 'webkit' ? 'iPhone 13' : 'Pixel 7'];
 const deviceConfig = profile === 'mobile'
-  ? { viewport: phone.viewport, deviceScaleFactor: phone.deviceScaleFactor, isMobile: true, hasTouch: true }
+  ? { viewport: phone.viewport, deviceScaleFactor: phone.deviceScaleFactor,
+      // Firefox does not support Playwright's isMobile setting.
+      ...(browserName === 'firefox' ? {} : {isMobile: true}), hasTouch: true }
   : { viewport: { width: 1366, height: 768 }, deviceScaleFactor: 1 };
 const browser = await browsers[browserName].launch({ headless: true });
 const records = [];
@@ -53,7 +55,8 @@ function summarize(message) {
 }
 
 for (const site of config.sites) {
-  const context = await browser.newContext({ ...deviceConfig, locale:'en-US', colorScheme:'light', acceptDownloads:false });
+  const context = await browser.newContext({ ...deviceConfig, locale:'en-US', colorScheme:'light', acceptDownloads:false,
+    bypassCSP:true });
   const page = await context.newPage();
   const item = { siteId:site.id, browser:browserName, profile, status:'inconclusive', artifactOnly:true };
   try {
@@ -135,7 +138,8 @@ for (const site of config.sites) {
       }
     }
   } catch (error) {
-    item.status = item.status === 'script-regression' ? item.status : 'inconclusive';
+    item.status = ['observed','drift-candidate','script-regression'].includes(item.status)
+      ? 'script-regression' : 'inconclusive';
     item.errorClass = safeFailure(error);
   } finally {
     records.push(item);
