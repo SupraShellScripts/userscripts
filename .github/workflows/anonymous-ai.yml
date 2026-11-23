@@ -1,0 +1,52 @@
+name: Anonymous AI Site Compatibility (public-only)
+on:
+  pull_request:
+    paths:
+      - 'anonymous-ai-probe/**'
+      - '.github/workflows/anonymous-ai.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: anonymous-ai-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  anonymous-browser-probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+        profile: [desktop, mobile]
+    env:
+      OBS_BROWSER: ${{ matrix.browser }}
+      OBS_PROFILE: ${{ matrix.profile }}
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate public-only classification and report contract
+        run: node --test anonymous-ai-probe/lib.test.mjs
+      - name: Install public Playwright browser
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund --no-save --no-package-lock --ignore-scripts playwright@1.57.0
+          npx playwright install --with-deps "${OBS_BROWSER}"
+      - name: Inspect public ChatGPT and Gemini without logging in
+        run: node anonymous-ai-probe/probe.mjs
+      - name: Retain only redacted aggregate reports for three days
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: anonymous-ai-${{ matrix.browser }}-${{ matrix.profile }}
+          path: reports/ai-anonymous-*.json
+          if-no-files-found: warn
+          retention-days: 3
