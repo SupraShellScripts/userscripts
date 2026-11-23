@@ -3,11 +3,13 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { chromium, firefox, webkit, devices } from 'playwright';
+import {matchBaseline, assessDrift} from './drift.mjs';
 
 const browsers = { chromium, firefox, webkit };
 const browserName = process.env.OBS_BROWSER || 'chromium';
 const profile = process.env.OBS_PROFILE || 'desktop';
 const config = JSON.parse(await fs.readFile(new URL('./sites.json', import.meta.url), 'utf8'));
+const baselines = JSON.parse(await fs.readFile(new URL('./baselines.json', import.meta.url), 'utf8'));
 if (!Object.hasOwn(browsers, browserName) || !['desktop', 'mobile'].includes(profile)) {
   throw new Error('Unsupported observer engine/profile');
 }
@@ -142,6 +144,10 @@ for (const site of config.sites) {
       ? 'script-regression' : 'inconclusive';
     item.errorClass = safeFailure(error);
   } finally {
+    item.baselineComparison = assessDrift(item, matchBaseline(baselines,site.id,browserName,profile));
+    if (item.status === 'observed' && item.baselineComparison.driftState === 'drift-candidate') {
+      item.status = 'drift-candidate';
+    }
     records.push(item);
     summarize(item);
     await context.close();
@@ -152,7 +158,7 @@ await fs.mkdir('reports', {recursive:true});
 const report = {
   schemaVersion:1, observedAt:new Date().toISOString(),
   sourceCommit:process.env.GITHUB_SHA || 'local-unpinned',
-  browser:browserName, profile, results:records,
+  browser:browserName, profile, approvedBaseline:baselines.approved === true, results:records,
   limitations:['No authentication or vendor clicks','Mobile profiles are emulation, not devices',
     'No private script execution','Screenshot baselines are not automatically approved']
 };
