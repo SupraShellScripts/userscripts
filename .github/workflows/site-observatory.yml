@@ -1,0 +1,53 @@
+name: Public Site Observatory (unauthenticated)
+on:
+  pull_request:
+    paths:
+      - 'site-observatory/**'
+      - '.github/workflows/site-observatory.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '31 5 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-observatory-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  observe-public-sites:
+    if: github.event_name != 'schedule' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+        profile: [desktop, mobile]
+    env:
+      OBS_BROWSER: ${{ matrix.browser }}
+      OBS_PROFILE: ${{ matrix.profile }}
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install pinned Playwright engine
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund --no-save --no-package-lock --ignore-scripts playwright@1.57.0
+          npx playwright install --with-deps "${OBS_BROWSER}"
+      - name: Observe public site semantics, DOM and CSS
+        run: node site-observatory/observe.mjs
+      - name: Retain redacted receipts for 3 days
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-observatory-${{ matrix.browser }}-${{ matrix.profile }}
+          path: reports/*.json
+          if-no-files-found: warn
+          retention-days: 3
