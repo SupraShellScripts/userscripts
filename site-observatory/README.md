@@ -23,6 +23,10 @@ The Playwright version is pinned. Host runner/browser versions and source SHA mu
 - Only a short (three-day) public CI artifact of these redacted JSON receipts is retained. PR logs contain the same category-only outcomes. Do not enable automatic baseline updates on a cron run.
 - The public Total Phase smoke injects the **already published** `.user.js` with an API shim. It does **not** assert equivalent behavior to the actual Violentmonkey extension or an authenticated download.
 
+## Durable, reviewer-approved baselines
+
+The committed `site-observatory/baselines.json` starts **unapproved**; every observation is classified `baseline-pending` until reviewers deliberately approve a per-site × engine × device profile reference. `drift.mjs` compares approved minimum semantic/DOM counts, required landmarks, horizontal overflow and the currently published Total Phase UI. It distinguishes `not-comparable` (unavailable/auth/unknown) from actual `drift-candidate` and records the reasons in the three-day artifacts. `drift.test.mjs` guards against automatically promoting unreviewed snapshots. GitHub PR history retains review evidence, while future weekly probes compare to the committed baseline; CI must not automatically edit that baseline. This is not pixel-diff automation or approval of any current live-site state.
+
 ## Drift model (observe → classify → plan → apply → verify)
 
 1. **Observe/discover**: pin `sourceCommit`, target URL, time, browser engine, viewport/profile and public-vs-private script state; check reachability, redirects, semantic labels, stable roles/labels, candidate controls, layout geometry and CSS properties.
