@@ -34,7 +34,7 @@ try {
         }
         try {
           const url=new URL(req.url());
-          if (/\\.(?:zip|exe|msi|dmg|tar|7z|pkg|iso|bin|pdf)$/i.test(url.pathname)){
+          if (/\.(?:zip|exe|msi|dmg|tar|7z|pkg|iso|bin|pdf)$/i.test(url.pathname)){
             blockedDownloads++;return route.abort();
           }
         } catch {return route.abort();}
