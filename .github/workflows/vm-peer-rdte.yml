@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: vm-peer-rdte-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   upstream-extension-smoke:
     runs-on: ubuntu-24.04
@@ -27,7 +31,11 @@ jobs:
         run: |
           set -euo pipefail
           npm install --no-audit --no-fund --no-save --no-package-lock --ignore-scripts playwright@1.57.0 webdav-server@2.6.3
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
+          CHROME_BIN="$(node -e 'process.stdout.write(require("playwright").chromium.executablePath())')"
+          if ldd "$CHROME_BIN" 2>&1 | grep -q 'not found'; then
+            npx playwright install-deps chromium
+          fi
       - name: Fetch verified upstream Violentmonkey MV3 distribution
         run: |
           set -euo pipefail
