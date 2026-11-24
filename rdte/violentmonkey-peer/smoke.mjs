@@ -7,7 +7,9 @@ import { chromium } from 'playwright';
 const extensionDir = path.resolve(process.env.VM_EXTENSION_DIR || '.work/violentmonkey');
 const report = { schema: 1, profile: 'chromium-mv3', extensionVersion: '2.50.0',
   extensionBoot: false, settingsLoaded: false, nativeProviders: [],
-  syncButtons: { merge: false, push: false, pull: false }, errorClass: null };
+  syncButtons: { merge: false, push: false, pull: false }, errorClass: null,
+  dom: {ready:'unknown',bodyChildren:0,vueRoot:false,settingsPanel:false,selects:0,options:0},
+  pageErrorNames:[], consoleErrors:0 };
 const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'vm-peer-public-'));
 let context;
 try {
@@ -25,9 +27,26 @@ try {
   if (!/^[a-p]{32}$/.test(id)) throw new Error('Invalid extension service-worker ID');
   report.extensionBoot = true;
   const page = await context.newPage();
+  page.on('pageerror',error => {
+    if (report.pageErrorNames.length < 5) report.pageErrorNames.push(error?.name || 'Error');
+  });
+  page.on('console',message => {
+    if (message.type() === 'error') report.consoleErrors++;
+  });
   await page.goto('chrome-extension://' + id + '/options/index.html#settings',
     {waitUntil: 'domcontentloaded', timeout: 30000});
-  await page.locator('option[value="webdav"]').waitFor({timeout: 25000});
+  try {
+    await page.locator('option[value="webdav"]').waitFor({timeout: 10000});
+  } finally {
+    report.dom = await page.evaluate(() => ({
+      ready:document.readyState,
+      bodyChildren:document.body?.children.length||0,
+      vueRoot:!!document.querySelector('.page-options'),
+      settingsPanel:!!document.querySelector('.tab-settings'),
+      selects:document.querySelectorAll('select').length,
+      options:document.querySelectorAll('select option').length,
+    })).catch(() => report.dom);
+  }
   report.settingsLoaded = true;
   report.nativeProviders = await page.locator('select:has(option[value="webdav"]) option')
     .evaluateAll(elements => elements.map(el => el.value).filter(Boolean).sort());
