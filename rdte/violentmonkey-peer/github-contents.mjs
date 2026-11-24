@@ -33,7 +33,7 @@ function script(version,name='Synthetic Git Contents Peer') {
     '// @namespace    https://example.invalid/vm-github-rdte',
     '// @version      '+version,
     '// @match        https://example.invalid/*',
-    '// @grant        none','// ==UserScript==','','const rev = '+JSON.stringify(version)+';','',
+    '// @grant        none','// ==/UserScript==','','const rev = '+JSON.stringify(version)+';','',
   ].join('\n');
 }
 function hash(value) {return createHash('sha256').update(value).digest('hex');}
