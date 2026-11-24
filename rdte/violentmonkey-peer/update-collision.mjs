@@ -21,7 +21,8 @@ const report={
  remoteNewer:true,nativeUpdateInvoked:false,nativeUpdated:false,
  localEditsOverwritten:null,cleanUpdateSucceeded:false,
  protectedDirtyInstalled:false,preflightBlocked:false,
- protectedLocalHashUnchanged:false,siteMetaRequests:0,
+ protectedLocalHashUnchanged:false,autoUpdateExcluded:false,
+ manualUpdateBypassedExclusion:false,siteMetaRequests:0,
  siteScriptRequests:0,failedStage:null,errorCategory:null,
 };
 let port,stage='start';
@@ -164,6 +165,22 @@ try{
  report.preflightBlocked=true;
  report.protectedLocalHashUnchanged=digest(await local(guarded))===digest(dirty);
  if(!report.protectedLocalHashUnchanged)throw new Error('blocked update lost local work');
+ stage='dev-disable-auto-updates';
+ const dev=await launch('dev-disabled');
+ const devId=await install(dev,baseline);
+ await install(dev,dirty,devId);
+ if(!await refreshUntil(dev,dirty))throw new Error('dev dirty source absent');
+ // This is the real VM configuration command used by its own UI, not MCP.
+ await native(dev,'UpdateScriptInfo',{id:devId,config:{shouldUpdate:0}});
+ stage='dev-auto-check';
+ await native(dev,'CheckUpdate',{auto:true});
+ report.autoUpdateExcluded=digest(await local(dev))===digest(dirty);
+ if(!report.autoUpdateExcluded)throw new Error('scheduled updater ignored per-script opt-out');
+ stage='dev-manual-update-check';
+ await native(dev,'CheckUpdate',{ids:[devId]});
+ report.manualUpdateBypassedExclusion=await refreshUntil(dev,release);
+ if(!report.manualUpdateBypassedExclusion)
+   throw new Error('manual update behavior does not match source expectation');
 } catch(error){
  report.failedStage=stage;
  const str=String(error?.message||'');
