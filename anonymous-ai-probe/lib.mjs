@@ -23,7 +23,8 @@ export function classifyResult({httpStatus,hostClass,loginAffordance,challenge})
   if (hostClass === 'auth-provider') return 'auth-required';
   if (hostClass === 'other') return 'redirected-offsite';
   if (challenge) return 'challenge';
-  if (loginAffordance) return 'auth-required';
+  // A sign-in affordance does not prove login is mandatory for anonymous use.
+  if (loginAffordance) return 'login-visible';
   if (!Number.isInteger(httpStatus) || httpStatus < 200 || httpStatus >= 400) return 'inconclusive';
   // Anonymous page visibility is NOT a guarantee that chat transcripts are accessible.
   return 'anonymous-page';

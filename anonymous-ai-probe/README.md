@@ -13,7 +13,7 @@ binary downloads, navigates to the three publicly available entrypoints and reco
 only HTTP status, canonical/auth/other destination class, login/challenge booleans,
 generic counts of buttons, headings and textboxes, and generic browser DOM capability
 booleans. Explicit report-field allowlisting prevents inclusion of raw page data.
-Anti-bot blocking, auth-required, offsite redirects, anonymous page availability and
+Anti-bot blocking, actual auth redirects, optional visible sign-in controls, offsite redirects, anonymous page availability and
 navigation errors are **different results**.
 
 Six independent public GitHub Actions jobs run on `ubuntu-24.04`, pinned Playwright

@@ -21,7 +21,7 @@ test('anti-bot, auth, offsite and public pages are not conflated',()=>{
   assert.equal(classifyResult({httpStatus:200,hostClass:'auth-provider'}),'auth-required');
   assert.equal(classifyResult({httpStatus:200,hostClass:'other'}),'redirected-offsite');
   assert.equal(classifyResult({httpStatus:200,hostClass:'target',challenge:true}),'challenge');
-  assert.equal(classifyResult({httpStatus:200,hostClass:'target',loginAffordance:true}),'auth-required');
+  assert.equal(classifyResult({httpStatus:200,hostClass:'target',loginAffordance:true}),'login-visible');
   assert.equal(classifyResult({httpStatus:200,hostClass:'target'}),'anonymous-page');
   assert.equal(classifyResult({httpStatus:null,hostClass:'target'}),'inconclusive');
 });
