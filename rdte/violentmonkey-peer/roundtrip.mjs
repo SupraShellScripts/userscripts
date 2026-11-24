@@ -16,14 +16,15 @@ const report = {
   peersBooted: 0, browserAPull: false, browserAInstalledV1: false,
   browserAMergedV1: false, browserBPulledV1: false,
   browserAInstalledV2: false, browserAMergedV2: false,
-  browserBPulledV2: false, nativeWrites: 0, nativeReads: 0,
+  browserBPulledV2: false, unrelatedPreserved: false, replayIdempotent: false,
+  noRemoteDeletes: false, nativeWrites: 0, nativeReads: 0, nativeDeletes: 0,
   failedStage: null,
 };
 const baseName = 'Synthetic VM Peer Roundtrip';
-function code(version) {
+function code(version,name=baseName) {
   return [
     '// ==UserScript==',
-    '// @name         ' + baseName,
+    '// @name         ' + name,
     '// @namespace    https://example.invalid/vm-peer-rdte',
     '// @version      ' + version,
     '// @match        https://example.invalid/*',
@@ -41,10 +42,11 @@ const dir = await fs.mkdtemp(path.join(os.tmpdir(),'vm-two-peers-'));
 const server = new webdav.WebDAVServer({port:0});
 const clients = [];
 let stage='start';
-const traffic={reads:0,writes:0};
+const traffic={reads:0,writes:0,deletes:0};
 server.afterRequest((arg,next)=>{
   if (['GET','PROPFIND','HEAD'].includes(arg.request.method)) traffic.reads++;
   if (['PUT','MKCOL','DELETE','MOVE','COPY'].includes(arg.request.method)) traffic.writes++;
+  if (arg.request.method==='DELETE') traffic.deletes++;
   next();
 });
 async function startWebDav() {
@@ -128,9 +130,9 @@ async function sync(peer,action) {
   }
   throw new Error('Native VM sync did not return to authorized state');
 }
-async function editSynthetic(peer,version,existingId=null) {
+async function editSynthetic(peer,version,existingId=null,name=baseName) {
   const result=await native(peer,'ParseScript',{
-    code:code(version),
+    code:code(version,name),
     ...(existingId?{id:existingId}:{isNew:true}),
     message:'',bumpDate:true,
   });
@@ -138,7 +140,7 @@ async function editSynthetic(peer,version,existingId=null) {
   if(!Number.isInteger(id)||id<1)throw new Error('Native ParseScript did not save script');
   return id;
 }
-async function localCode(peer) {
+async function localCode(peer,name=baseName) {
   // Read-only evidence from the actual extension's local storage; not a
   // second implementation of synchronization or a remote-manifest writer.
   return peer.page.evaluate(async name=>{
@@ -146,7 +148,7 @@ async function localCode(peer) {
     return Object.entries(data).filter(([key,val])=>
       key.startsWith('code:') && typeof val==='string' && val.includes(name))
       .map(([,val])=>val);
-  },baseName);
+  },name);
 }
 async function verify(peer,index) {
   let latest=null;
@@ -186,6 +188,22 @@ try {
   await sync(b,'pull');
   await verify(b,0);
   report.browserBPulledV1=true;
+  stage='peer-B-add-unrelated-script';
+  const otherName='Synthetic VM Peer Independent Control';
+  await editSynthetic(b,'0.0.1',null,otherName);
+  const controlHash=createHash('sha256').update(code('0.0.1',otherName)).digest('hex');
+  async function verifyControl(peer) {
+    const codes=await localCode(peer,otherName);
+    if(codes.length!==1 || createHash('sha256').update(codes[0]).digest('hex')!==controlHash)
+      throw new Error('Unrelated control script was lost or unexpectedly modified');
+  }
+  await verifyControl(b);
+  stage='peer-B-merge-control';
+  await sync(b,'merge');
+  stage='peer-A-pull-control';
+  await sync(a,'pull');
+  await verifyControl(a);
+  await verify(a,0);
   stage='peer-A-install-v2';
   await editSynthetic(a,'0.0.2',scriptId);
   await verify(a,1);
@@ -198,12 +216,27 @@ try {
   await sync(b,'pull');
   await verify(b,1);
   report.browserBPulledV2=true;
+  stage='verify-unrelated-control-retention';
+  await verifyControl(a);
+  await verifyControl(b);
+  report.unrelatedPreserved=true;
+  stage='repeat-merge-and-pull-idempotence';
+  await sync(a,'merge');
+  await sync(b,'pull');
+  await verify(a,1);
+  await verify(b,1);
+  await verifyControl(a);
+  await verifyControl(b);
+  report.replayIdempotent=true;
 } catch(error) {
   report.failedStage=stage;
   process.exitCode=1;
 } finally {
   report.nativeReads=traffic.reads;
   report.nativeWrites=traffic.writes;
+  report.nativeDeletes=traffic.deletes;
+  report.noRemoteDeletes=traffic.deletes===0;
+  if(traffic.deletes!==0) {report.failedStage ||= 'no-remote-deletion';process.exitCode=1;}
   await Promise.allSettled(clients.map(c=>c.close()));
   await new Promise(resolve => server.stop(resolve));
   await fs.rm(dir,{force:true,recursive:true});
