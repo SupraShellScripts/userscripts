@@ -41,7 +41,11 @@ jobs:
       - name: Launch real extension and inspect native sync UI
         run: node rdte/violentmonkey-peer/smoke.mjs
       - name: Native two-peer pull, edit, merge and pull (synthetic WebDAV)
+        id: webdav
         run: node rdte/violentmonkey-peer/roundtrip.mjs
+      - name: Actual native GitHub Contents provider two-peer test (local synthetic HTTP)
+        if: always()
+        run: node rdte/violentmonkey-peer/github-contents.mjs
       - name: Upload sanitized qualification receipt
         if: always()
         uses: actions/upload-artifact@v4
@@ -50,5 +54,6 @@ jobs:
           path: |
             reports/violentmonkey-peer-smoke.json
             reports/violentmonkey-two-peer.json
+            reports/violentmonkey-github-peer.json
           if-no-files-found: warn
           retention-days: 3
