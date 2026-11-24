@@ -26,7 +26,7 @@ jobs:
       - name: Install Playwright Chromium (public runtime only)
         run: |
           set -euo pipefail
-          npm install --no-audit --no-fund --no-save --no-package-lock --ignore-scripts playwright@1.57.0
+          npm install --no-audit --no-fund --no-save --no-package-lock --ignore-scripts playwright@1.57.0 webdav-server@2.6.3
           npx playwright install --with-deps chromium
       - name: Fetch verified upstream Violentmonkey MV3 distribution
         run: |
@@ -40,11 +40,15 @@ jobs:
           test -f .work/violentmonkey/manifest.json
       - name: Launch real extension and inspect native sync UI
         run: node rdte/violentmonkey-peer/smoke.mjs
+      - name: Native two-peer pull, edit, merge and pull (synthetic WebDAV)
+        run: node rdte/violentmonkey-peer/roundtrip.mjs
       - name: Upload sanitized qualification receipt
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: vm-upstream-extension-smoke
-          path: reports/violentmonkey-peer-smoke.json
+          path: |
+            reports/violentmonkey-peer-smoke.json
+            reports/violentmonkey-two-peer.json
           if-no-files-found: warn
           retention-days: 3
