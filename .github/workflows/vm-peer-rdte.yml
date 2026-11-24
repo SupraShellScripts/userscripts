@@ -1,0 +1,50 @@
+name: Violentmonkey Native Peer RDTE (Synthetic Only)
+on:
+  pull_request:
+    paths:
+      - 'rdte/violentmonkey-peer/**'
+      - '.github/workflows/vm-peer-rdte.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  upstream-extension-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+      VM_EXTENSION_DIR: .work/violentmonkey
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Playwright Chromium (public runtime only)
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund --no-save --no-package-lock --ignore-scripts playwright@1.57.0
+          npx playwright install --with-deps chromium
+      - name: Fetch verified upstream Violentmonkey MV3 distribution
+        run: |
+          set -euo pipefail
+          mkdir -p .work/violentmonkey
+          curl --proto '=https' --tlsv1.2 -fLsS --retry 3 \
+            https://github.com/violentmonkey/violentmonkey/releases/download/v2.50.0/Violentmonkey-mv3-v2.50.0.zip \
+            -o .work/violentmonkey.zip
+          echo "72f1de5a2edc4bc3cd3b3ca06c2b3631cdde4f06f8ed9e8b2b565bf77258b36c  .work/violentmonkey.zip" | sha256sum -c -
+          unzip -q .work/violentmonkey.zip -d .work/violentmonkey
+          test -f .work/violentmonkey/manifest.json
+      - name: Launch real extension and inspect native sync UI
+        run: node rdte/violentmonkey-peer/smoke.mjs
+      - name: Upload sanitized qualification receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vm-upstream-extension-smoke
+          path: reports/violentmonkey-peer-smoke.json
+          if-no-files-found: warn
+          retention-days: 3
