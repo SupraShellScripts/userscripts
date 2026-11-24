@@ -46,6 +46,8 @@ jobs:
           echo "72f1de5a2edc4bc3cd3b3ca06c2b3631cdde4f06f8ed9e8b2b565bf77258b36c  .work/violentmonkey.zip" | sha256sum -c -
           unzip -q .work/violentmonkey.zip -d .work/violentmonkey
           test -f .work/violentmonkey/manifest.json
+      - name: Validate fail-closed update collision policy
+        run: node --test rdte/violentmonkey-peer/update-preflight.test.mjs
       - name: Launch real extension and inspect native sync UI
         run: node rdte/violentmonkey-peer/smoke.mjs
       - name: Native two-peer pull, edit, merge and pull (synthetic WebDAV)
