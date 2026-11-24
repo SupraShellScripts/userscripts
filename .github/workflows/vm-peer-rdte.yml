@@ -54,6 +54,8 @@ jobs:
       - name: Actual native GitHub Contents provider two-peer test (local synthetic HTTP)
         if: always()
         run: node rdte/violentmonkey-peer/github-contents.mjs
+      - name: Newer HTTP update site versus local unpublished edits (real VM)
+        run: node rdte/violentmonkey-peer/update-collision.mjs
       - name: Upload sanitized qualification receipt
         if: always()
         uses: actions/upload-artifact@v4
@@ -63,5 +65,6 @@ jobs:
             reports/violentmonkey-peer-smoke.json
             reports/violentmonkey-two-peer.json
             reports/violentmonkey-github-peer.json
+            reports/violentmonkey-update-collision.json
           if-no-files-found: warn
           retention-days: 3
