@@ -21,6 +21,8 @@ const report={
   unrelatedRetained:false,backendWrites:0,backendReads:0,
   backendDeletes:0,shaConflicts:0,errorStage:null,errorCategory:null,
   firstInstallReturnedId:false,firstInstalledCount:null,firstInstalledHash:false,
+  installNativeThrew:false,installResultType:null,installResultKeys:[],
+  installWhereType:null,installWhereKeys:[],installErrorKind:null,
 };
 let stage='start';
 function sha(data) {return createHash('sha1').update(data).digest('hex');}
@@ -169,11 +171,22 @@ async function sync(peer,mode){
   throw new Error('native sync did not finish');
 }
 async function install(peer,version,existingId=null,name){
-  const data=await native(peer,'ParseScript',{
-    code:script(version,name),
-    ...(existingId?{id:existingId}:{isNew:true}),
-    message:'',bumpDate:true,
-  });
+  let data;
+  try{
+    data=await native(peer,'ParseScript',{
+      code:script(version,name),
+      ...(existingId?{id:existingId}:{isNew:true}),
+      message:'',bumpDate:true,
+    });
+  }catch(e){
+    report.installNativeThrew=true;
+    report.installErrorKind=typeof e?.name==='string' ? e.name.slice(0,35) : 'unknown';
+    throw e;
+  }
+  report.installResultType=Array.isArray(data)?'array':typeof data;
+  report.installResultKeys=Object.keys(data||{}).slice(0,8);
+  report.installWhereType=typeof data?.where;
+  report.installWhereKeys=Object.keys(data?.where||{}).slice(0,8);
   const id=data?.where?.id;
   if(!Number.isInteger(id)||id<1)throw new Error('native ParseScript failed');
   return id;
