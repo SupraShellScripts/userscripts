@@ -19,7 +19,7 @@ function script(version='1.0.0',body='baseline',fields=[]){
  ].join('\n');
 }
 const baseline=script('1.0.0'),release=script('1.1.0','release');
-const input=(installedCode=baseline,remoteCode=release,remoteMeta=release)=>({
+const input=(installedCode=baseline,remoteCode=release,remoteMeta=remoteCode)=>({
   approvedBaseline:baseline,installedCode,remoteCode,remoteMeta,
   approvedRemoteSha256:sha256(remoteCode),
 });
