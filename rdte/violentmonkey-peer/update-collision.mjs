@@ -8,6 +8,7 @@ import http from 'node:http';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {chromium} from 'playwright';
+import {assessUpdate,sha256} from './update-preflight.mjs';
 
 const extPath=path.resolve(process.env.VM_EXTENSION_DIR||'.work/violentmonkey');
 const root=await fs.mkdtemp(path.join(os.tmpdir(),'vm-update-conflict-'));
@@ -109,18 +110,6 @@ async function refreshUntil(peer,expected,attempts=40){
  }
  return false;
 }
-async function preflight({approvedBaseline,installedCode,remoteMeta}){
- // Illustrative *actor policy*, not a VM built-in conflict gate.
- // Real deployments must bind baseline to an approved immutable Git SHA.
- const baseHash=digest(approvedBaseline),localHash=digest(installedCode);
- const versionOf=x=>x.match(/^\/\/ @version[ \t]+([^\n\r]+)/m)?.[1]?.trim()||'';
- const remoteVersion=versionOf(remoteMeta);
- const localVersion=versionOf(installedCode);
- const hasLocalEdits=baseHash!==localHash;
- const remoteNewer=remoteVersion==='1.1.0'&&localVersion==='1.0.0';
- return {block:hasLocalEdits&&remoteNewer,localDirty:hasLocalEdits,
-    remoteNewer,remoteVersion,localVersion};
-}
 try{
  stage='site-bind';
  await new Promise((resolve,reject)=>{
@@ -158,13 +147,19 @@ try{
  const guardedId=await install(guarded,baseline);
  await install(guarded,dirty,guardedId);
  if(!await refreshUntil(guarded,dirty))throw new Error('guarded dirty install missing');
+ report.protectedDirtyInstalled=true;
  const remoteResponse=await fetch('http://127.0.0.1:'+port+'/collision.meta.js');
  if(!remoteResponse.ok)throw new Error('synthetic update metadata unavailable');
- const resultGuard=await preflight({
+ const releaseResponse=await fetch('http://127.0.0.1:'+port+'/collision.user.js');
+ if(!releaseResponse.ok)throw new Error('synthetic release code unavailable');
+ const resultGuard=assessUpdate({
    approvedBaseline:baseline,installedCode:await local(guarded),
    remoteMeta:await remoteResponse.text(),
+   remoteCode:await releaseResponse.text(),
+   approvedRemoteSha256:sha256(release),
  });
- if(!resultGuard.block)throw new Error('safety policy did not recognize two writers');
+ if(resultGuard.decision!=='block'||!resultGuard.reasons.includes('local-unpublished-edits'))
+   throw new Error('safety policy did not recognize two writers');
  // NO native CheckUpdate or SyncStart may execute when preflight blocks.
  report.preflightBlocked=true;
  report.protectedLocalHashUnchanged=digest(await local(guarded))===digest(dirty);
