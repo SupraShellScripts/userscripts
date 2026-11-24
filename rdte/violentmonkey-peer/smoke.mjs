@@ -31,6 +31,10 @@ try {
   report.settingsLoaded = true;
   report.nativeProviders = await page.locator('select:has(option[value="webdav"]) option')
     .evaluateAll(elements => elements.map(el => el.value).filter(Boolean).sort());
+  // The sync action buttons render only when a provider is selected.
+  // Select WebDAV without entering a server address or making requests.
+  await page.locator('select:has(option[value="webdav"])').selectOption('webdav');
+  await page.locator('fieldset:has(input[type="url"])').first().waitFor({timeout: 15000});
   const section = page.locator('section:has(option[value="webdav"])');
   const num = await section.locator('button:has(svg)').count();
   report.syncButtons = { merge: num > 0, push: num > 1, pull: num > 2 };
