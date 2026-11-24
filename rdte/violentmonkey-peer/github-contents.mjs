@@ -23,7 +23,6 @@ const report={
   firstInstallReturnedId:false,firstInstalledCount:null,firstInstalledHash:false,
   installNativeThrew:false,installResultType:null,installResultKeys:[],
   installWhereType:null,installWhereKeys:[],installErrorKind:null,
-  installErrorSanitized:null,
 };
 let stage='start';
 function sha(data) {return createHash('sha1').update(data).digest('hex');}
@@ -182,13 +181,6 @@ async function install(peer,version,existingId=null,name){
   }catch(e){
     report.installNativeThrew=true;
     report.installErrorKind=typeof e?.name==='string' ? e.name.slice(0,35) : 'unknown';
-    // Entire test uses synthetic inputs. Strip links, credentials and opaque IDs
-    // before retaining an allowlisted bounded diagnostic substring.
-    report.installErrorSanitized=String(e?.message || '')
-      .replace(/https?:\/\/\S+/g,'[URL]')
-      .replace(/local-synthetic-token/g,'[TEST_TOKEN]')
-      .replace(/[A-Za-z0-9_-]{35,}/g,'[OPAQUE]')
-      .slice(0,180);
     throw e;
   }
   report.installResultType=Array.isArray(data)?'array':typeof data;

@@ -29,3 +29,16 @@ extension handles all native sync state, conflict resolution and propagation.
 It uses invented script names, a dummy local test token and no GitHub account.
 No public repo is used as a sync backend and no private-source data is shared.
 Only a separately reviewed release workflow may later enroll a real backend.
+
+## Qualification evidence and known limits (2026-11-24)
+
+The native WebDAV parent PR #8 has passed a real two-peer VM extension
+roundtrip including an unrelated script, repeat synchronization and no remote
+deletes (public run 45335306226). This child tests the **real native
+GithubContents provider** against a dummy local GitHub Contents REST server,
+not a real repository. The first failed run showed a synthetic fixture typo:
+the userscript metadata block lacked the closing slash. The harness now uses
+`// ==/UserScript==` and retains only bounded boolean/category evidence.
+Until an exact-head two-peer GithubContents run succeeds, the GitHub backend is
+**not qualified**. Conflict injection, partial-write recovery and production
+credentials remain separate gates. No native sync metadata is forged.
