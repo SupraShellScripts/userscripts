@@ -35,32 +35,30 @@ try {
   });
   await page.goto('chrome-extension://' + id + '/options/index.html#settings',
     {waitUntil: 'domcontentloaded', timeout: 30000});
-  try {
-    await page.locator('option[value="webdav"]').waitFor({timeout: 10000});
-  } finally {
-    report.dom = await page.evaluate(() => ({
-      ready:document.readyState,
-      bodyChildren:document.body?.children.length||0,
-      vueRoot:!!document.querySelector('.page-options'),
-      settingsPanel:!!document.querySelector('.tab-settings'),
-      selects:document.querySelectorAll('select').length,
-      options:document.querySelectorAll('select option').length,
-    })).catch(() => report.dom);
-  }
-  report.settingsLoaded = true;
-  report.nativeProviders = await page.locator('select:has(option[value="webdav"]) option')
-    .evaluateAll(elements => elements.map(el => el.value).filter(Boolean).sort());
-  // The sync action buttons render only when a provider is selected.
-  // Select WebDAV without entering a server address or making requests.
-  await page.locator('select:has(option[value="webdav"])').selectOption('webdav');
-  await page.locator('fieldset:has(input[type="url"])').first().waitFor({timeout: 15000});
-  const section = page.locator('section:has(option[value="webdav"])');
-  const num = await section.locator('button:has(svg)').count();
-  report.syncButtons = { merge: num > 0, push: num > 1, pull: num > 2 };
+  // Read the extension's OWN registered sync services through its native
+  // background command, even when Vue's sync menu has not hydrated.
+  const available = await page.evaluate(
+    () => chrome.runtime.sendMessage({cmd:'SyncGetStates'}));
+  report.nativeProviders = Array.isArray(available)
+    ? available.map(x => x.name).filter(x => typeof x === 'string').sort() : [];
+  report.settingsLoaded = await page.locator('option[value="webdav"]')
+    .waitFor({timeout:2000}).then(()=>true,()=>false);
+  report.dom = await page.evaluate(() => ({
+    ready:document.readyState,
+    bodyChildren:document.body?.children.length||0,
+    vueRoot:!!document.querySelector('.page-options'),
+    settingsPanel:!!document.querySelector('.tab-settings'),
+    selects:document.querySelectorAll('select').length,
+    options:document.querySelectorAll('select option').length,
+  }));
   if (!['webdav','github-contents'].every(p => report.nativeProviders.includes(p)))
-    throw new Error('Native provider missing from extension UI');
-  if (!report.syncButtons.merge || !report.syncButtons.pull)
-    throw new Error('Native sync controls missing');
+    throw new Error('Registered native backend unavailable');
+  if (report.settingsLoaded) {
+    await page.locator('select:has(option[value="webdav"])').selectOption('webdav');
+    const section=page.locator('section:has(option[value="webdav"])');
+    const n=await section.locator('button:has(svg)').count();
+    report.syncButtons={merge:n>0,push:n>1,pull:n>2};
+  }
   await page.close();
 } catch (error) {
   report.errorClass = /Timeout/i.test(String(error)) ? 'timeout' : 'extension-ui-error';

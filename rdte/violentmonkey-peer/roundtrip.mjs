@@ -77,58 +77,65 @@ async function newPeer(id) {
   report.peersBooted++;
   return {context,page,id:extensionId};
 }
+// All commands are handled by upstream VM's real background service worker.
+async function native(peer,cmd,data) {
+  return peer.page.evaluate(payload => chrome.runtime.sendMessage(payload),{cmd,data});
+}
+async function nativeState(peer) {
+  const states=await native(peer,'SyncGetStates');
+  if (!Array.isArray(states)) throw new Error('Native SyncGetStates not available');
+  const service=states.find(s=>s.name==='webdav');
+  if (!service) throw new Error('Native WebDAV provider not registered');
+  return service.state?.status;
+}
 async function setup(peer,port) {
   await peer.page.goto('chrome-extension://'+peer.id+'/options/index.html#settings',
     {waitUntil:'domcontentloaded',timeout:25000});
-  const section=peer.page.locator('section:has(option[value="webdav"])');
-  await section.locator('option[value="webdav"]').waitFor({timeout:20000});
-  // Disable auto sync BEFORE activating remote; no merge from an empty peer.
-  const checkboxes=section.locator('input[type="checkbox"]');
-  await checkboxes.first().uncheck();
-  await section.locator('select:has(option[value="webdav"])').selectOption('webdav');
-  const fieldset=section.locator('fieldset').filter({has:peer.page.locator('input[type="url"]')}).first();
-  await fieldset.locator('input[type="url"]').fill('http://127.0.0.1:'+port+'/');
-  // Test service is anonymous localhost only; no credentials.
-  await fieldset.locator('input[type="checkbox"]').check();
-  await fieldset.getByRole('button',{name:/save/i}).click();
-  await section.locator('button:has(svg)').nth(2).waitFor({state:'visible',timeout:15000});
+  // The settings panel is UI only. All mutations below use VM's own
+  // SetOptions/SyncSetConfig commands; neither writes remote records.
+  await native(peer,'SetOptions',{
+    syncAutomatically:false,syncScriptStatus:false,'sync.current':'webdav',
+  });
+  await peer.page.waitForTimeout(300);
+  await native(peer,'SyncSetConfig',{
+    serverUrl:'http://127.0.0.1:'+port+'/',anonymous:true,username:'',password:'',
+  });
+  for(let count=0;count<30;count++){
+    const state=await nativeState(peer);
+    if ([4,9,10].includes(state)) {
+      if(state!==4)throw new Error('Native WebDAV provider preparation returned error state');
+      return;
+    }
+    await peer.page.waitForTimeout(250);
+  }
+  throw new Error('Native WebDAV provider preparation timed out');
 }
 async function sync(peer,action) {
-  const section=peer.page.locator('section:has(option[value="webdav"])');
-  const index=action==='pull'?2:action==='merge'?0:1;
-  const button=section.locator('button:has(svg)').nth(index);
-  await peer.page.waitForFunction(() => {
-    const host=document.querySelector('section:has(option[value="webdav"])');
-    const buttons=host?.querySelectorAll('button:has(svg)');
-    return !!buttons?.[0] && !buttons[0].disabled;
-  },{timeout:20000});
-  await button.click();
-  // The action is async; wait for VM to release its disabled sync controls.
-  await peer.page.waitForFunction(() => {
-    const section=document.querySelector('section:has(option[value="webdav"])');
-    const first=section?.querySelector('button:has(svg)');
-    return first && !first.disabled;
-  },{timeout:30000});
+  const mode=action==='pull'?'pull':action==='merge'?'merge':'push';
+  if (await nativeState(peer)!==4)throw new Error('VM not authorized/ready to sync');
+  await native(peer,'SyncStart',mode);
+  // SyncStart queues VM's native _sync asynchronously; do not treat the
+  // message acknowledgement as completion. Observe state and then verify
+  // the receiver's real local code, never remote metadata formats.
+  let observedInProgress=false;
+  for(let count=0;count<80;count++){
+    const state=await nativeState(peer);
+    if(state===6)observedInProgress=true;
+    if(state===9||state===10)throw new Error('Native VM sync entered error state');
+    if(observedInProgress && state===4)return;
+    if(count>=10&&state===4)return; // fast sync may finish before sampling
+    await peer.page.waitForTimeout(150);
+  }
+  throw new Error('Native VM sync did not return to authorized state');
 }
 async function editSynthetic(peer,version,existingId=null) {
-  await peer.page.goto('chrome-extension://'+peer.id+
-    '/options/index.html#scripts/'+(existingId || '_new'),{waitUntil:'domcontentloaded'});
-  const editor=peer.page.locator('.CodeMirror').first();
-  await editor.waitFor({state:'visible',timeout:20000});
-  await editor.evaluate((el,value)=>{
-    if (!el.CodeMirror)throw new Error('Native CodeMirror not initialized');
-    el.CodeMirror.setValue(value);
-  },code(version));
-  const save=peer.page.locator('.edit-header button').filter({hasText:/^save$/i}).first();
-  await peer.page.waitForFunction(() => {
-    const btn=[...document.querySelectorAll('.edit-header button')]
-      .find(e=>e.textContent.trim().toLowerCase()==='save');
-    return !!btn && !btn.disabled;
-  },{timeout:12000});
-  await save.click();
-  await peer.page.waitForTimeout(400);
-  const id=Number(peer.page.url().split('#scripts/')[1]);
-  if (!Number.isInteger(id) || id<1)throw new Error('Native editor did not save script');
+  const result=await native(peer,'ParseScript',{
+    code:code(version),
+    ...(existingId?{id:existingId}:{isNew:true}),
+    message:'',bumpDate:true,
+  });
+  const id=result?.where?.id;
+  if(!Number.isInteger(id)||id<1)throw new Error('Native ParseScript did not save script');
   return id;
 }
 async function localCode(peer) {
