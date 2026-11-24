@@ -19,7 +19,8 @@ const report={
   peersBooted:0,nativeInitialPull:false,nativeMergeV1:false,
   independentPullV1:false,nativeMergeV2:false,independentPullV2:false,
   unrelatedRetained:false,backendWrites:0,backendReads:0,
-  backendDeletes:0,shaConflicts:0,errorStage:null,
+  backendDeletes:0,shaConflicts:0,errorStage:null,errorCategory:null,
+  firstInstallReturnedId:false,firstInstalledCount:null,firstInstalledHash:false,
 };
 let stage='start';
 function sha(data) {return createHash('sha1').update(data).digest('hex');}
@@ -196,8 +197,14 @@ try{
   stage='peer-A-setup';await configure(a,port);
   stage='peer-A-first-pull';await sync(a,'pull');
   report.nativeInitialPull=true;
-  stage='peer-A-install';const id=await install(a,'0.0.1');
-  await verify(a,'0.0.1','Synthetic Git Contents Peer');
+  stage='peer-A-install-call';const id=await install(a,'0.0.1');
+  report.firstInstallReturnedId=true;
+  stage='peer-A-verify-install';
+  const firstCodes=await inspect(a,'Synthetic Git Contents Peer');
+  report.firstInstalledCount=firstCodes.length;
+  report.firstInstalledHash=firstCodes.length===1 &&
+    hash(firstCodes[0])===hash(script('0.0.1'));
+  if(!report.firstInstalledHash)throw new Error('synthetic install hash mismatch');
   stage='peer-A-merge-v1';await sync(a,'merge');
   report.nativeMergeV1=true;
   stage='peer-B-start';const b=await newPeer('B');
@@ -228,6 +235,13 @@ try{
   if(report.backendWrites<3)throw new Error('expected native backend writes absent');
 }catch(error){
   report.errorStage=stage;
+  const kind=String(error?.message||'');
+  report.errorCategory=/not initialized|unavailable|not found/i.test(kind)
+    ? 'unavailable' : /timed out|timeout/i.test(kind)
+    ? 'timeout' : /syntax|parse/i.test(kind)
+    ? 'parse' : /hash|mismatch/i.test(kind)
+    ? 'verification' : /permission|denied|unauthoriz/i.test(kind)
+    ? 'authorization' : 'other';
   process.exitCode=1;
 }finally{
   await Promise.allSettled(clients.map(x=>x.close()));
