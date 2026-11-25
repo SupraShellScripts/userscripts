@@ -22,7 +22,7 @@ try{
  const toggle=()=>detail.locator('extensions-detail-view').locator('extensions-toggle-row').filter({hasText:/allow user scripts/i}).locator('cr-toggle');
  const options=async()=>{const p=await ctx.newPage();await p.goto('chrome-extension://'+id+'/options/index.html#scripts');return p;};
  const api=async()=>{const p=await options();try{return await p.evaluate(()=>typeof chrome.userScripts!=='undefined');}finally{await p.close();}};
- const enabled=async()=>toggle.evaluate(e=>Boolean(e.checked));
+ const enabled=async()=>toggle().evaluate(e=>Boolean(e.checked));
  const restartProfile=async()=>{
   await ctx.close();ctx=null;
   ctx=await chromium.launchPersistentContext(root,{channel:'chromium',headless:false,args:['--disable-extensions-except='+ext,'--load-extension='+ext,'--lang=en-US']});
