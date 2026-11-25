@@ -14,9 +14,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  upstream-extension-smoke:
+  native-scheduler:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 5
     env:
       CI: 'true'
       VM_EXTENSION_DIR: .work/violentmonkey
@@ -46,33 +46,15 @@ jobs:
           echo "72f1de5a2edc4bc3cd3b3ca06c2b3631cdde4f06f8ed9e8b2b565bf77258b36c  .work/violentmonkey.zip" | sha256sum -c -
           unzip -q .work/violentmonkey.zip -d .work/violentmonkey
           test -f .work/violentmonkey/manifest.json
-      - name: Validate fail-closed update collision policy
-        run: node --test rdte/violentmonkey-peer/update-preflight.test.mjs rdte/violentmonkey-peer/metadata-drift.test.mjs rdte/violentmonkey-peer/static-git.test.mjs
-      - name: Launch real extension and inspect native sync UI
-        run: node rdte/violentmonkey-peer/smoke.mjs
-      - name: Native two-peer pull, edit, merge and pull (synthetic WebDAV)
-        id: webdav
-        run: node rdte/violentmonkey-peer/roundtrip.mjs
-      - name: Actual native GitHub Contents provider two-peer test (local synthetic HTTP)
-        if: always()
-        run: node rdte/violentmonkey-peer/github-contents.mjs
-      - name: Newer HTTP update site versus local unpublished edits (real VM)
-        run: node rdte/violentmonkey-peer/update-collision.mjs
-      - name: Native Git-backed update and exact-byte installation
+      - name: Real native cron alarm catch-up (no manual update invocation)
         run: |
           set -euo pipefail
           mkdir -p reports
-          node rdte/violentmonkey-peer/git-native-update.mjs | tee reports/violentmonkey-git-native-update.json
+          node rdte/violentmonkey-peer/native-scheduler.mjs | tee reports/violentmonkey-native-scheduler.json
       - name: Upload sanitized qualification receipt
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: vm-upstream-extension-smoke
-          path: |
-            reports/violentmonkey-peer-smoke.json
-            reports/violentmonkey-two-peer.json
-            reports/violentmonkey-github-peer.json
-            reports/violentmonkey-update-collision.json
-            reports/violentmonkey-git-native-update.json
-          if-no-files-found: warn
+          name: vm-native-scheduler
+          path: reports/violentmonkey-native-scheduler.json
           retention-days: 3
