@@ -1,0 +1,43 @@
+name: Continuation state-machine prior art (synthetic only)
+on:
+  pull_request:
+    paths:
+      - 'rdte/continuation-core/**'
+      - '.github/workflows/continuation-core.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  upstream-core:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Acquire exact reviewed state-machine source and test
+        run: |
+          set -euo pipefail
+          mkdir -p .work/aiac/src/content .work/aiac/tests reports
+          base=https://raw.githubusercontent.com/DayDayUpGamer/AIAutoContinue/b9174ddd728eb5c20a44b12c6bae13c603099c53
+          curl --proto '=https' --tlsv1.2 -fLsS --retry 2 "$base/src/content/core.js" -o .work/aiac/src/content/core.js
+          curl --proto '=https' --tlsv1.2 -fLsS --retry 2 "$base/tests/core.test.js" -o .work/aiac/tests/core.test.js
+          test "$(git hash-object .work/aiac/src/content/core.js)" = 7f4d448a885a689b3a655b1b6d461af524ad07cb
+          test "$(git hash-object .work/aiac/tests/core.test.js)" = c337b2df18a7e8d666973483c2314056bb3939c1
+      - name: Run reviewed upstream deterministic tests
+        run: |
+          set -euo pipefail
+          node --test .work/aiac/tests/core.test.js | tee reports/upstream-core.tap
+      - name: Compare mission-level stop conditions
+        run: |
+          set -euo pipefail
+          node rdte/continuation-core/mission-guards.cjs | tee reports/mission-guards.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: continuation-core-bakeoff
+          path: reports/
+          retention-days: 3
