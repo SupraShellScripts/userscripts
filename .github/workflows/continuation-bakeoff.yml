@@ -43,3 +43,33 @@ jobs:
           name: continuation-bakeoff
           path: reports/continuation-bakeoff.json
           retention-days: 3
+  native-permission:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      VM_EXTENSION_DIR: .work/violentmonkey
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install public runtime
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund --no-save --no-package-lock --ignore-scripts playwright@1.57.0
+          npx playwright install chromium
+          command -v xvfb-run
+          mkdir -p .work/violentmonkey
+          curl --proto '=https' --tlsv1.2 -fLsS --retry 2 https://github.com/violentmonkey/violentmonkey/releases/download/v2.50.0/Violentmonkey-mv3-v2.50.0.zip -o .work/vm.zip
+          echo "72f1de5a2edc4bc3cd3b3ca06c2b3631cdde4f06f8ed9e8b2b565bf77258b36c  .work/vm.zip" | sha256sum -c -
+          unzip -q .work/vm.zip -d .work/violentmonkey
+      - name: Test documented permission consent and revocation
+        run: xvfb-run -a node rdte/continuation-bakeoff/native-permission.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-permission
+          path: reports/native-permission.json
+          retention-days: 3
