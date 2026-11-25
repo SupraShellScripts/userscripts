@@ -41,3 +41,30 @@ jobs:
           name: continuation-core-bakeoff
           path: reports/
           retention-days: 3
+  browser-primitives:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install public browser test runtime
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund --no-save --no-package-lock --ignore-scripts playwright@1.57.0
+          npx playwright install chromium
+          CHROME_BIN="$(node -e 'process.stdout.write(require("playwright").chromium.executablePath())')"
+          if ldd "$CHROME_BIN" 2>&1 | grep -q 'not found'; then
+            npx playwright install-deps chromium
+          fi
+      - name: Exercise browser ownership and rendered acknowledgment primitives
+        run: node rdte/continuation-core/browser-primitives.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: continuation-browser-primitives
+          path: reports/browser-primitives.json
+          retention-days: 3
