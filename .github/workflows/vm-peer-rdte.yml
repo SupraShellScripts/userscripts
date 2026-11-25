@@ -47,7 +47,7 @@ jobs:
           unzip -q .work/violentmonkey.zip -d .work/violentmonkey
           test -f .work/violentmonkey/manifest.json
       - name: Validate fail-closed update collision policy
-        run: node --test rdte/violentmonkey-peer/update-preflight.test.mjs
+        run: node --test rdte/violentmonkey-peer/update-preflight.test.mjs rdte/violentmonkey-peer/metadata-drift.test.mjs rdte/violentmonkey-peer/static-git.test.mjs
       - name: Launch real extension and inspect native sync UI
         run: node rdte/violentmonkey-peer/smoke.mjs
       - name: Native two-peer pull, edit, merge and pull (synthetic WebDAV)
@@ -58,6 +58,11 @@ jobs:
         run: node rdte/violentmonkey-peer/github-contents.mjs
       - name: Newer HTTP update site versus local unpublished edits (real VM)
         run: node rdte/violentmonkey-peer/update-collision.mjs
+      - name: Native Git-backed update and exact-byte installation
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          node rdte/violentmonkey-peer/git-native-update.mjs | tee reports/violentmonkey-git-native-update.json
       - name: Upload sanitized qualification receipt
         if: always()
         uses: actions/upload-artifact@v4
@@ -68,5 +73,6 @@ jobs:
             reports/violentmonkey-two-peer.json
             reports/violentmonkey-github-peer.json
             reports/violentmonkey-update-collision.json
+            reports/violentmonkey-git-native-update.json
           if-no-files-found: warn
           retention-days: 3

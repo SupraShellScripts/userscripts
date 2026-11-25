@@ -7,11 +7,12 @@ const stable=/^(0|[1-9][0-9]*)(?:\.(?:0|[1-9][0-9]*)){1,3}$/;
 
 function parse(source) {
   if(typeof source!=='string')throw Error('source-unavailable');
-  const begin=source.indexOf('// ==UserScript==');
-  const end=source.indexOf('// ==/UserScript==');
-  if(begin!==0||end<begin)throw Error('invalid-metablock');
+  const lines=source.split(/\r?\n/);
+  const end=lines.indexOf('// ==/UserScript==');
+  if(lines[0]!=='// ==UserScript=='||end<1)throw Error('invalid-metablock');
+  const header=lines.slice(1,end);
   const fields=new Map();
-  for(const line of source.slice(begin,end).split(/\r?\n/)){
+  for(const line of header){
     const m=line.match(/^\/\/[ \t]+@([a-z][a-z0-9-]*)[ \t]+(.*)$/i);
     if(m)fields.set(m[1],(fields.get(m[1])||[]).concat(m[2].trim()));
   }
@@ -20,7 +21,12 @@ function parse(source) {
   }
   const version=fields.get('version')[0];
   if(!stable.test(version))throw Error('unsupported-version-format');
-  return {version,fields,id:fields.get('namespace')[0]+'\n'+fields.get('name')[0]};
+  if(version.split('.').some(part=>!Number.isSafeInteger(Number(part))))
+    throw Error('invalid-version-integer');
+  // Conservative unattended policy: preserve every non-version metadata line,
+  // including flags, unknown directives, whitespace, casing and ordering.
+  const nonVersionHeader=JSON.stringify(header.filter(line=>!/^\/\/[ \t]+@version[ \t]+/.test(line)));
+  return {version,fields,nonVersionHeader,id:fields.get('namespace')[0]+'\n'+fields.get('name')[0]};
 }
 function compare(x,y){
   const a=x.split('.').map(Number),b=y.split('.').map(Number);
@@ -30,13 +36,6 @@ function compare(x,y){
     if((a[i]||0)<(b[i]||0))return -1;
   }
   return 0;
-}
-const protectedFields=[
- 'match','include','exclude','exclude-match','grant','connect',
- 'require','resource','updateURL','downloadURL','inject-into',
-];
-function signature(fields,key) {
-  return JSON.stringify([...(fields.get(key)||[])].sort());
 }
 export function assessUpdate({approvedBaseline,installedCode,remoteMeta,
   remoteCode,approvedRemoteSha256}={}) {
@@ -56,11 +55,9 @@ export function assessUpdate({approvedBaseline,installedCode,remoteMeta,
     return block('metadata-body-version-mismatch');
   if(sha256(remoteCode)!==approvedRemoteSha256)
     return block('unapproved-remote-code');
-  for(const key of protectedFields){
-    if(signature(base.fields,key)!==signature(remote.fields,key) ||
-       signature(base.fields,key)!==signature(meta.fields,key))
-      return block('metadata-scope-drift');
-  }
+  if(base.nonVersionHeader!==remote.nonVersionHeader ||
+     base.nonVersionHeader!==meta.nonVersionHeader)
+    return block('metadata-scope-drift');
   const ver=compare(remote.version,local.version);
   result.remoteNewer=ver>0;
   if(result.localDirty)return block('local-unpublished-edits');
