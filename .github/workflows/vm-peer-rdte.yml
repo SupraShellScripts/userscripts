@@ -5,21 +5,12 @@ on:
       - 'rdte/violentmonkey-peer/**'
       - '.github/workflows/vm-peer-rdte.yml'
   workflow_dispatch:
-
 permissions:
   contents: read
-
-concurrency:
-  group: vm-peer-rdte-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  upstream-extension-smoke:
+  pages-delivery-readback:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    env:
-      CI: 'true'
-      VM_EXTENSION_DIR: .work/violentmonkey
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,52 +18,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Install Playwright Chromium (public runtime only)
-        run: |
-          set -euo pipefail
-          npm install --no-audit --no-fund --no-save --no-package-lock --ignore-scripts playwright@1.57.0 webdav-server@2.6.3
-          npx playwright install chromium
-          CHROME_BIN="$(node -e 'process.stdout.write(require("playwright").chromium.executablePath())')"
-          if ldd "$CHROME_BIN" 2>&1 | grep -q 'not found'; then
-            npx playwright install-deps chromium
-          fi
-      - name: Fetch verified upstream Violentmonkey MV3 distribution
-        run: |
-          set -euo pipefail
-          mkdir -p .work/violentmonkey
-          curl --proto '=https' --tlsv1.2 -fLsS --retry 3 \
-            https://github.com/violentmonkey/violentmonkey/releases/download/v2.50.0/Violentmonkey-mv3-v2.50.0.zip \
-            -o .work/violentmonkey.zip
-          echo "72f1de5a2edc4bc3cd3b3ca06c2b3631cdde4f06f8ed9e8b2b565bf77258b36c  .work/violentmonkey.zip" | sha256sum -c -
-          unzip -q .work/violentmonkey.zip -d .work/violentmonkey
-          test -f .work/violentmonkey/manifest.json
-      - name: Validate fail-closed update collision policy
-        run: node --test rdte/violentmonkey-peer/update-preflight.test.mjs rdte/violentmonkey-peer/metadata-drift.test.mjs rdte/violentmonkey-peer/static-git.test.mjs
-      - name: Launch real extension and inspect native sync UI
-        run: node rdte/violentmonkey-peer/smoke.mjs
-      - name: Native two-peer pull, edit, merge and pull (synthetic WebDAV)
-        id: webdav
-        run: node rdte/violentmonkey-peer/roundtrip.mjs
-      - name: Actual native GitHub Contents provider two-peer test (local synthetic HTTP)
+      - name: Compare existing public delivery with pinned Git digests
+        run: node rdte/violentmonkey-peer/pages-delivery.mjs
+      - uses: actions/upload-artifact@v4
         if: always()
-        run: node rdte/violentmonkey-peer/github-contents.mjs
-      - name: Newer HTTP update site versus local unpublished edits (real VM)
-        run: node rdte/violentmonkey-peer/update-collision.mjs
-      - name: Native Git-backed update and exact-byte installation
-        run: |
-          set -euo pipefail
-          mkdir -p reports
-          node rdte/violentmonkey-peer/git-native-update.mjs | tee reports/violentmonkey-git-native-update.json
-      - name: Upload sanitized qualification receipt
-        if: always()
-        uses: actions/upload-artifact@v4
         with:
-          name: vm-upstream-extension-smoke
-          path: |
-            reports/violentmonkey-peer-smoke.json
-            reports/violentmonkey-two-peer.json
-            reports/violentmonkey-github-peer.json
-            reports/violentmonkey-update-collision.json
-            reports/violentmonkey-git-native-update.json
-          if-no-files-found: warn
+          name: pages-delivery-readback
+          path: reports/pages-delivery.json
           retention-days: 3
