@@ -18,6 +18,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - name: Exercise deterministic metadata and acquisition guards
+        run: node --test rdte/model-acquisition/projection.test.mjs
       - name: Compare public repository metadata at exact revision
         run: node rdte/model-acquisition/metadata.mjs
       - uses: actions/upload-artifact@v4

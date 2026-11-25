@@ -1,0 +1,16 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {project,comparePinned,acquisitionDisposition} from './projection.mjs';
+const repo='example/public-model';
+const file={rfilename:'model.safetensors',size:12,blobId:'b'.repeat(40),lfs:{sha256:'c'.repeat(64)}};
+const sample=()=>({id:repo,sha:'a'.repeat(40),private:false,gated:false,cardData:{license:'apache-2.0'},siblings:[{...file},{rfilename:'README.md',size:1,blobId:'d'.repeat(40)}]});
+test('ordering is deterministic',()=>{const a=sample(),b=sample();b.siblings.reverse();comparePinned(project(a,repo),project(b,repo));});
+test('wrong repo and private repo rejected',()=>{assert.throws(()=>project(sample(),'other/model'));assert.throws(()=>project({...sample(),private:true},repo));});
+test('invalid immutable revision rejected',()=>assert.throws(()=>project({...sample(),sha:'main'},repo)));
+test('unsafe path forms rejected',()=>{for(const p of ['../x','/x','a/../b','a//b','a\\b'])assert.throws(()=>project({...sample(),siblings:[{...file,rfilename:p}]},repo));});
+test('duplicate file rejected',()=>assert.throws(()=>project({...sample(),siblings:[file,file]},repo)));
+test('unknown size/hash remain null',()=>{const m=project({...sample(),siblings:[{rfilename:'x',size:-1,blobId:'bad'}]},repo);assert.deepEqual(m.files[0],{path:'x',size:null,gitBlob:null,lfsSha:null});assert.equal(acquisitionDisposition(m),'identity-review-required');});
+test('license absent blocks acquisition disposition',()=>assert.equal(acquisitionDisposition(project({...sample(),cardData:{}},repo)),'license-review-required'));
+test('gated and unknown access require review',()=>{for(const gated of [true,'manual','auto',null])assert.equal(acquisitionDisposition(project({...sample(),gated},repo)),'access-review-required');});
+test('metadata complete does not grant permission',()=>assert.equal(acquisitionDisposition(project(sample(),repo)),'metadata-complete-review-required'));
+test('license, gating, file and revision drift rejected',()=>{const original=project(sample(),repo);for(const changed of [{...sample(),cardData:{license:'other'}},{...sample(),gated:true},{...sample(),sha:'e'.repeat(40)},{...sample(),siblings:[{...file,size:13}]}])assert.throws(()=>comparePinned(original,project(changed,repo)));});
