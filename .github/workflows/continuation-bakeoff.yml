@@ -1,0 +1,45 @@
+name: Continuation prior-art bake-off (synthetic only)
+on:
+  pull_request:
+    paths:
+      - 'rdte/continuation-bakeoff/**'
+      - '.github/workflows/continuation-bakeoff.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audited-native-control:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      VM_EXTENSION_DIR: .work/violentmonkey
+      CANDIDATE_FILE: .work/candidate.user.js
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install public test runtime
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund --no-save --no-package-lock --ignore-scripts playwright@1.57.0
+          npx playwright install chromium
+      - name: Acquire pinned reviewed candidate and native extension
+        run: |
+          set -euo pipefail
+          mkdir -p .work/violentmonkey
+          curl --proto '=https' --tlsv1.2 -fLsS --retry 2 https://raw.githubusercontent.com/DayDayUpGamer/AIAutoContinue/b9174ddd728eb5c20a44b12c6bae13c603099c53/userscript/ai-auto-continue-lite.user.js -o .work/candidate.user.js
+          test "$(git hash-object .work/candidate.user.js)" = e8f714426fd6377d451ea78195fca7b3d995ac96
+          curl --proto '=https' --tlsv1.2 -fLsS --retry 2 https://github.com/violentmonkey/violentmonkey/releases/download/v2.50.0/Violentmonkey-mv3-v2.50.0.zip -o .work/vm.zip
+          echo "72f1de5a2edc4bc3cd3b3ca06c2b3631cdde4f06f8ed9e8b2b565bf77258b36c  .work/vm.zip" | sha256sum -c -
+          unzip -q .work/vm.zip -d .work/violentmonkey
+      - name: Measure candidate on isolated synthetic browser surface
+        run: node rdte/continuation-bakeoff/qualify.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: continuation-bakeoff
+          path: reports/continuation-bakeoff.json
+          retention-days: 3
