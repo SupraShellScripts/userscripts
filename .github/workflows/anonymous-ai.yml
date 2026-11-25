@@ -36,17 +36,49 @@ jobs:
       - name: Validate public-only classification and report contract
         run: node --test anonymous-ai-probe/lib.test.mjs
       - name: Install public Playwright browser
+        if: matrix.browser != 'webkit' || matrix.profile != 'desktop'
         run: |
           set -euo pipefail
           npm install --no-audit --no-fund --no-save --no-package-lock --ignore-scripts playwright@1.57.0
           npx playwright install --with-deps "${OBS_BROWSER}"
       - name: Inspect public ChatGPT and Gemini without logging in
+        if: matrix.browser != 'webkit' || matrix.profile != 'desktop'
         run: node anonymous-ai-probe/probe.mjs
+      - name: Pull pinned Playwright image for WebKit desktop
+        if: matrix.browser == 'webkit' && matrix.profile == 'desktop'
+        run: |
+          set -euo pipefail
+          image=mcr.microsoft.com/playwright@sha256:3bed4b1a12f2338642f3d8cba28e291deef3c66bd4a964bbeb3e57bbff511dbd
+          docker pull --platform linux/amd64 "$image"
+          digest="$(docker image inspect --format '{{index .RepoDigests 0}}' "$image")"
+          [[ "$digest" == "$image" ]]
+          printf 'PLAYWRIGHT_IMAGE=%s\n' "$digest" >> "$GITHUB_ENV"
+          mkdir -p reports
+          printf '%s\n' "$digest" > reports/ai-anonymous-image.txt
+      - name: Inspect anonymous public sites in pinned non-root image
+        if: matrix.browser == 'webkit' && matrix.profile == 'desktop'
+        run: |
+          set -euo pipefail
+          docker run --rm --init --user "$(id -u):$(id -g)" --cap-drop=ALL \
+            --security-opt=no-new-privileges --shm-size=512m \
+            --tmpfs /work:rw,exec,nosuid,nodev,mode=1777 -w /work \
+            -e HOME=/tmp -e npm_config_cache=/tmp/npm-cache \
+            -e OBS_BROWSER -e OBS_PROFILE -e CI -e GITHUB_SHA \
+            --mount "type=bind,src=$GITHUB_WORKSPACE/anonymous-ai-probe,dst=/source,readonly" \
+            --mount "type=bind,src=$GITHUB_WORKSPACE/reports,dst=/receipt" \
+            "$PLAYWRIGHT_IMAGE" sh -ec '
+              cp -R /source ./anonymous-ai-probe
+              npm install --no-audit --no-fund --no-save --no-package-lock --ignore-scripts playwright@1.57.0
+              node --version
+              node --test anonymous-ai-probe/lib.test.mjs
+              node anonymous-ai-probe/probe.mjs
+              cp reports/ai-anonymous-*.json /receipt/
+            '
       - name: Retain only redacted aggregate reports for three days
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: anonymous-ai-${{ matrix.browser }}-${{ matrix.profile }}
-          path: reports/ai-anonymous-*.json
+          path: reports/ai-anonymous-*
           if-no-files-found: warn
           retention-days: 3
