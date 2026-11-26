@@ -1,0 +1,28 @@
+name: Source hosting evidence baseline
+on:
+  pull_request:
+    paths:
+      - 'rdte/source-hosting/**'
+      - '.github/workflows/source-hosting-evidence.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  evidence-baseline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test rdte/source-hosting/evidence.test.mjs
+      - run: node rdte/source-hosting/live.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: source-hosting-evidence
+          path: reports/source-hosting-evidence.json
+          retention-days: 3
